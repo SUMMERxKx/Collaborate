@@ -1,15 +1,14 @@
 import { ReactNode } from 'react';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session) {
     redirect('/auth/signin');
@@ -38,7 +37,7 @@ export default async function DashboardLayout({
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <span className="text-sm text-gray-500">
-                  {session.user.email}
+                  {session.user?.email}
                 </span>
               </div>
               <div className="ml-4">

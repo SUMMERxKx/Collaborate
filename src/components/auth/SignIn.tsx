@@ -1,15 +1,31 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const msg = searchParams.get('message');
+    if (msg) {
+      setMessage(msg);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
     try {
       const result = await signIn('credentials', {
         email,
@@ -24,6 +40,8 @@ export default function SignIn() {
       }
     } catch (error) {
       setError('An error occurred during sign in');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -35,6 +53,15 @@ export default function SignIn() {
             Sign in to your account
           </h2>
         </div>
+
+        {message && (
+          <div className="rounded-md bg-blue-50 p-4">
+            <div className="text-sm text-blue-700 text-center">
+              {message}
+            </div>
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -76,10 +103,20 @@ export default function SignIn() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              Sign in
+              {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+
+          <div className="text-sm text-center">
+            <Link
+              href="/auth/signup"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Don't have an account? Sign up
+            </Link>
           </div>
         </form>
       </div>

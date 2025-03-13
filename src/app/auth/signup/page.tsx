@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sign Up - Collaborate',
-  description: 'Create your Collaborate workspace account',
+  description: 'Create your Collaborate account',
 };
 
 export default function SignUpPage() {
