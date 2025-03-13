@@ -4,18 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createClient } from '@supabase/supabase-js';
-import { Metadata } from 'next';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-export const metadata: Metadata = {
-  title: 'Join Group - Collaborate',
-  description: 'Join an existing collaborative group',
-};
 
 export default function JoinGroupPage() {
   const router = useRouter();
@@ -78,65 +74,73 @@ export default function JoinGroupPage() {
   };
 
   return (
-    <div>
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-            Join a Group
-          </h2>
-        </div>
-        <div className="mt-4 flex md:ml-4 md:mt-0">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-900 to-emerald-800 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
           <Link
             href="/dashboard"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center text-emerald-100 hover:text-emerald-50 transition-colors"
           >
-            Back to Groups
+            <ArrowLeftIcon className="h-5 w-5 mr-2" />
+            Back to Dashboard
           </Link>
-        </div>
-      </div>
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Join a Group</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="passkey" className="block text-sm font-medium text-gray-700">
-              Group Passkey
-            </label>
-            <div className="mt-1">
-              <input
-                type="text"
-                id="passkey"
-                name="passkey"
-                required
-                value={passkey}
-                onChange={(e) => setPasskey(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Enter group passkey"
-              />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-800/50 rounded-lg p-8 backdrop-blur-sm"
+        >
+          <h1 className="text-3xl font-bold text-emerald-100 mb-8">Join a Group</h1>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="passkey" className="block text-sm font-medium text-emerald-100">
+                Group Passkey
+              </label>
+              <div className="mt-1">
+                <input
+                  type="text"
+                  id="passkey"
+                  name="passkey"
+                  required
+                  value={passkey}
+                  onChange={(e) => setPasskey(e.target.value)}
+                  className="block w-full rounded-md border-emerald-600 bg-emerald-900/50 text-emerald-100 placeholder-emerald-400 focus:border-emerald-500 focus:ring-emerald-500"
+                  placeholder="Enter the group passkey"
+                />
+              </div>
+              <p className="mt-2 text-sm text-emerald-300">
+                Ask the group creator for the passkey to join their group.
+              </p>
             </div>
-          </div>
 
-          {error && (
-            <div className="text-red-500 text-sm">{error}</div>
-          )}
+            {error && (
+              <div className="text-red-400 text-sm">{error}</div>
+            )}
 
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {isLoading ? 'Joining...' : 'Join Group'}
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-4 py-2 border border-emerald-400 rounded-md shadow-sm text-sm font-medium text-emerald-100 bg-transparent hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+              >
+                {isLoading ? 'Joining...' : 'Join Group'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
       </div>
     </div>
   );
