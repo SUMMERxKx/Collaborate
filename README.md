@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Collaborate - Real-time Collaborative Workspace
+
+A modern collaborative workspace application that enables teams to work together in real-time. Create groups, share ideas on an interactive canvas, and communicate through live chat - all in one seamless platform.
+
+## Key Features
+
+### 🔐 Secure Group Spaces
+- Create private workspaces for your team
+- Generate secure passkeys for group access
+- Manage group members and permissions
+- Join multiple groups for different projects
+
+### 🎨 Interactive Canvas
+- Real-time collaborative drawing and editing
+- Rich toolset for creativity:
+  - Freehand drawing with customizable brush
+  - Text annotations and labels
+  - Sticky notes for quick ideas
+  - Task cards for project management
+- All changes sync instantly across all users
+- Object selection, modification, and deletion
+- Infinite canvas with pan and zoom
+
+### 💬 Live Group Chat
+- Real-time messaging within each group
+- Message history persistence
+- User presence indicators
+- Automatic scrolling for new messages
+- Emoji support for expressive communication
+
+### 👥 User Management
+- Secure authentication system
+- Personal dashboard
+- Group membership overview
+- Activity tracking
+
+## Tech Stack
+
+### Frontend
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Modern, utility-first styling
+- **Fabric.js** - Canvas manipulation
+- **Zustand** - State management
+
+### Backend & Infrastructure
+- **Supabase**
+  - PostgreSQL database
+  - Real-time subscriptions
+  - User authentication
+  - Row-level security
+- **NextAuth.js** - Authentication framework
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone and Install:**
+   ```bash
+   git clone https://github.com/SUMMERxKx/Collaborate.git
+   cd collaborate
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. **Environment Setup:**
+   Create `.env.local` with:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   NEXTAUTH_SECRET=your_nextauth_secret
+   NEXTAUTH_URL=http://localhost:3000
+   ```
+
+3. **Database Setup:**
+   - Create a Supabase project
+   - Run schema from `supabase/schema.sql`
+   - Configure auth providers
+
+4. **Start Development:**
+   ```bash
+   npm run dev
+   ```
+   Visit [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+```
+collaborate/
+├── src/
+│   ├── app/              # Next.js pages and API routes
+│   ├── components/       # Reusable React components
+│   │   ├── auth/        # Authentication components
+│   │   ├── canvas/      # Canvas and drawing tools
+│   │   ├── chat/        # Real-time chat components
+│   │   └── group/       # Group management
+│   ├── lib/             # Utilities and configurations
+│   ├── store/           # Zustand state stores
+│   └── types/           # TypeScript definitions
+├── public/              # Static assets
+└── supabase/           # Database schema and configs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+We welcome contributions! Please follow these steps:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License.
