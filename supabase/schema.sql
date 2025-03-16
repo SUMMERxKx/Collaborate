@@ -1,3 +1,9 @@
+-- Drop existing tables and their dependencies
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS canvas_items CASCADE;
+DROP TABLE IF EXISTS group_members CASCADE;
+DROP TABLE IF EXISTS groups CASCADE;
+
 -- Create groups table
 CREATE TABLE groups (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -37,74 +43,80 @@ CREATE TABLE chat_messages (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- Create RLS policies
+-- Enable RLS
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE canvas_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- Groups policies
-CREATE POLICY "Users can view groups they are members of" ON groups
-  FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = id
-    )
-  );
-
-CREATE POLICY "Users can create groups" ON groups
+CREATE POLICY "Anyone can create groups" ON groups
   FOR INSERT WITH CHECK (auth.uid() = created_by);
 
--- Group members policies
-CREATE POLICY "Users can view members of their groups" ON group_members
-  FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = group_members.group_id
-    )
-  );
+CREATE POLICY "Anyone can view groups" ON groups
+  FOR SELECT TO authenticated USING (true);
 
+-- Group members policies
 CREATE POLICY "Users can join groups" ON group_members
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Canvas items policies
-CREATE POLICY "Users can view canvas items in their groups" ON canvas_items
-  FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = canvas_items.group_id
-    )
-  );
+CREATE POLICY "Anyone can view group members" ON group_members
+  FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Users can create canvas items in their groups" ON canvas_items
+-- After joining a group, users can access its content
+CREATE POLICY "Members can create canvas items" ON canvas_items
   FOR INSERT WITH CHECK (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = canvas_items.group_id
+    auth.uid() = created_by AND 
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = canvas_items.group_id 
+      AND user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Users can update canvas items in their groups" ON canvas_items
+CREATE POLICY "Members can view canvas items" ON canvas_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = canvas_items.group_id 
+      AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Members can update canvas items" ON canvas_items
   FOR UPDATE USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = canvas_items.group_id
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = canvas_items.group_id 
+      AND user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Users can delete canvas items in their groups" ON canvas_items
+CREATE POLICY "Members can delete canvas items" ON canvas_items
   FOR DELETE USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = canvas_items.group_id
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = canvas_items.group_id 
+      AND user_id = auth.uid()
     )
   );
 
 -- Chat messages policies
-CREATE POLICY "Users can view messages in their groups" ON chat_messages
+CREATE POLICY "Members can view messages" ON chat_messages
   FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = chat_messages.group_id
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = chat_messages.group_id 
+      AND user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Users can send messages to their groups" ON chat_messages
+CREATE POLICY "Members can send messages" ON chat_messages
   FOR INSERT WITH CHECK (
-    auth.uid() IN (
-      SELECT user_id FROM group_members WHERE group_id = chat_messages.group_id
+    auth.uid() = user_id AND 
+    EXISTS (
+      SELECT 1 FROM group_members 
+      WHERE group_id = chat_messages.group_id 
+      AND user_id = auth.uid()
     )
   ); 

@@ -2,8 +2,93 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import NavBar from '@/components/ui/NavBar';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { supabase, getAuthenticatedClient } from '@/lib/supabase';
 
 export default function Home() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [createdGroup, setCreatedGroup] = useState<{ id: string; passkey: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session?.user?.id) {
+      setError('Please sign in to create a group');
+      return;
+    }
+
+    if (!name.trim()) {
+      setError('Please enter a group name');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Get authenticated client
+      const { data: { session: supabaseSession }, error: authError } = await getAuthenticatedClient();
+      
+      if (authError) {
+        throw new Error('Authentication failed. Please sign in again.');
+      }
+
+      // Generate passkey
+      const passkey = Math.random().toString(36).substring(2, 10);
+      
+      // Create the group with a single query
+      const { data: group, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: name.trim(),
+          passkey,
+          created_by: session.user.id
+        })
+        .select()
+        .single();
+
+      if (groupError) {
+        console.error('Group creation error:', groupError);
+        throw new Error(groupError.message);
+      }
+
+      if (!group) {
+        throw new Error('Failed to create group - no data returned');
+      }
+
+      // Add creator as member
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: group.id,
+          user_id: session.user.id
+        });
+
+      if (memberError) {
+        console.error('Member creation error:', memberError);
+        // Try to clean up the created group
+        await supabase.from('groups').delete().eq('id', group.id);
+        throw new Error('Failed to set up group membership');
+      }
+
+      // Success! Set the created group and redirect
+      setCreatedGroup({ id: group.id, passkey: group.passkey });
+      router.push(`/dashboard/groups/${group.id}`);
+      
+    } catch (err) {
+      console.error('Creation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create group. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-900 to-emerald-800">
       <NavBar />

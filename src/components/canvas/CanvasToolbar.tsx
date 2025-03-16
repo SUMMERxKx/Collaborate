@@ -1,3 +1,6 @@
+'use client';
+
+import React from 'react';
 import { useCanvasStore } from '@/store/canvas';
 import type { CanvasItemType } from '@/types/canvas';
 import {
@@ -11,7 +14,7 @@ import {
 
 interface ToolButtonProps {
   tool: CanvasItemType | 'select';
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   isActive: boolean;
   onClick: () => void;

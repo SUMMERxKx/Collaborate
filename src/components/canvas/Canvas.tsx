@@ -1,19 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '@/store/canvas';
 import { supabase } from '@/lib/supabase';
 import type { AnyCanvasItem, Position } from '@/types/canvas';
-
-// Import fabric.js using require to avoid type conflicts
-const fabric = require('fabric').fabric;
+import { Canvas as FabricCanvas, IText, Group, Path, Rect, Text } from 'fabric';
 
 // Type declaration for fabric instance
 declare module 'fabric' {
-  export interface Object {
+  interface ITextOptions {
+    text?: string;
+  }
+
+  interface Object {
     data?: {
       id: string;
     };
     left?: number;
     top?: number;
+    selectable?: boolean;
+    evented?: boolean;
+  }
+
+  interface IText {
+    text: string;
+  }
+
+  interface Group {
+    addWithUpdate(object: any): Group;
+    getObjects(): any[];
   }
 }
 
@@ -64,17 +79,27 @@ export default function Canvas({ group_id, className }: CanvasProps) {
 
       let updatedContent = { ...item.content };
       
-      if (item.type === 'text' && obj instanceof fabric.IText) {
+      if (item.type === 'text' && obj instanceof IText) {
         updatedContent = {
           ...updatedContent,
           text: obj.text || ''
         };
-      } else if (item.type === 'sticky-note' && obj instanceof fabric.Group) {
-        const textObj = obj.getObjects()?.find((o: any) => o instanceof fabric.IText);
+      } else if (item.type === 'sticky-note' && obj instanceof Group) {
+        const textObj = obj.getObjects()?.find((o) => o instanceof IText) as IText | undefined;
         if (textObj) {
           updatedContent = {
             ...updatedContent,
             text: textObj.text || ''
+          };
+        }
+      } else if (item.type === 'task' && obj instanceof Group) {
+        const titleObj = obj.getObjects()?.find((o) => o instanceof IText) as IText | undefined;
+        const descObj = obj.getObjects()?.find((o) => o instanceof Text && o !== titleObj) as Text | undefined;
+        if (titleObj || descObj) {
+          updatedContent = {
+            ...updatedContent,
+            title: titleObj?.text || '',
+            description: descObj?.text || ''
           };
         }
       }
@@ -86,7 +111,8 @@ export default function Canvas({ group_id, className }: CanvasProps) {
             x: typeof obj.left === 'number' ? obj.left : 0,
             y: typeof obj.top === 'number' ? obj.top : 0
           },
-          content: updatedContent
+          content: updatedContent,
+          updated_at: new Date().toISOString()
         })
         .eq('id', obj.data.id);
 
@@ -102,11 +128,15 @@ export default function Canvas({ group_id, className }: CanvasProps) {
     if (!canvasRef.current) return;
 
     try {
-      fabricRef.current = new fabric.Canvas(canvasRef.current, {
+      fabricRef.current = new FabricCanvas(canvasRef.current, {
         width: window.innerWidth * 0.8,
         height: window.innerHeight * 0.8,
         backgroundColor: '#ffffff',
         isDrawingMode: currentTool === 'drawing',
+        preserveObjectStacking: true,
+        stopContextMenu: true,
+        selection: true,
+        renderOnAddRemove: true
       });
 
       const canvas = getCanvas();
@@ -148,7 +178,7 @@ export default function Canvas({ group_id, className }: CanvasProps) {
 
               switch (item.type) {
                 case 'text':
-                  fabricObject = new fabric.IText(item.content.text || '', {
+                  fabricObject = new IText(item.content.text || '', {
                     left: item.position.x || 0,
                     top: item.position.y || 0,
                     fontSize: item.content.fontSize || 16,
@@ -165,35 +195,32 @@ export default function Canvas({ group_id, className }: CanvasProps) {
                       console.warn('Invalid path points:', path);
                       return null;
                     }
-                    return new fabric.Path(path.points.map((p, i) => {
+                    return new Path(path.points.map((p, i) => {
                       return `${i === 0 ? 'M' : 'L'} ${p.x || 0} ${p.y || 0}`;
                     }).join(' '), {
                       stroke: path.color || '#000000',
                       strokeWidth: path.width || 1,
                       fill: 'transparent',
                     });
-                  }).filter(Boolean);
+                  }).filter((p): p is Path => p !== null);
                   
                   if (paths.length > 0) {
-                    fabricObject = new fabric.Group(paths, {
+                    fabricObject = new Group(paths, {
                       left: item.position.x || 0,
                       top: item.position.y || 0,
                     });
                   }
                   break;
                 case 'sticky-note':
-                  const noteGroup = new fabric.Group([], {
-                    left: item.position.x || 0,
-                    top: item.position.y || 0,
-                  });
-                  const noteRect = new fabric.Rect({
+                  const noteGroup = new Group();
+                  const noteRect = new Rect({
                     width: 150,
                     height: 150,
                     fill: item.content.color || '#ffeb3b',
                     rx: 10,
                     ry: 10,
                   });
-                  const noteText = new fabric.IText(item.content.text || '', {
+                  const noteText = new IText(item.content.text || '', {
                     fontSize: 14,
                     fill: '#000000',
                     width: 130,
@@ -202,27 +229,28 @@ export default function Canvas({ group_id, className }: CanvasProps) {
                   });
                   noteGroup.addWithUpdate(noteRect);
                   noteGroup.addWithUpdate(noteText);
-                  fabricObject = noteGroup;
-                  break;
-                case 'task':
-                  const taskGroup = new fabric.Group([], {
+                  noteGroup.set({
                     left: item.position.x || 0,
                     top: item.position.y || 0,
                   });
-                  const taskBg = new fabric.Rect({
+                  fabricObject = noteGroup;
+                  break;
+                case 'task':
+                  const taskGroup = new Group();
+                  const taskBg = new Rect({
                     width: 200,
                     height: 100,
                     fill: '#f3f4f6',
                     rx: 5,
                     ry: 5,
                   });
-                  const taskTitle = new fabric.IText(item.content.title || 'New Task', {
+                  const taskTitle = new IText(item.content.title || 'New Task', {
                     fontSize: 16,
                     fill: '#000000',
                     top: 10,
                     left: 10,
                   });
-                  const taskDesc = new fabric.Text(item.content.description || '', {
+                  const taskDesc = new Text(item.content.description || '', {
                     fontSize: 12,
                     fill: '#6b7280',
                     top: 40,
@@ -231,6 +259,10 @@ export default function Canvas({ group_id, className }: CanvasProps) {
                   taskGroup.addWithUpdate(taskBg);
                   taskGroup.addWithUpdate(taskTitle);
                   taskGroup.addWithUpdate(taskDesc);
+                  taskGroup.set({
+                    left: item.position.x || 0,
+                    top: item.position.y || 0,
+                  });
                   fabricObject = taskGroup;
                   break;
               }
@@ -310,7 +342,7 @@ export default function Canvas({ group_id, className }: CanvasProps) {
       });
 
       // Handle object modifications
-      canvas.on('object:modified', (e: any) => {
+      canvas.on('object:modified', (e: { target: any }) => {
         const obj = e?.target;
         if (!obj) {
           console.warn('No object modified:', e);
@@ -343,9 +375,25 @@ export default function Canvas({ group_id, className }: CanvasProps) {
                       left: Number(payload.new.position.x) || 0,
                       top: Number(payload.new.position.y) || 0
                     });
-                    if (updatedObj instanceof fabric.IText) {
+
+                    if (updatedObj instanceof IText) {
                       updatedObj.set('text', payload.new.content.text || '');
+                    } else if (updatedObj instanceof Group) {
+                      const textObj = updatedObj.getObjects()?.find((o: any) => o instanceof IText);
+                      if (textObj && payload.new.content.text) {
+                        textObj.set('text', payload.new.content.text);
+                      }
+
+                      const titleObj = updatedObj.getObjects()?.find((o: any) => o instanceof IText);
+                      const descObj = updatedObj.getObjects()?.find((o: any) => o instanceof Text && o !== titleObj);
+                      if (titleObj && payload.new.content.title) {
+                        titleObj.set('text', payload.new.content.title);
+                      }
+                      if (descObj && payload.new.content.description) {
+                        descObj.set('text', payload.new.content.description);
+                      }
                     }
+
                     canvas.renderAll();
                   } catch (error) {
                     console.error('Error updating object:', error);
@@ -397,7 +445,16 @@ export default function Canvas({ group_id, className }: CanvasProps) {
       if (currentTool === 'drawing') {
         canvas.freeDrawingBrush.width = 2;
         canvas.freeDrawingBrush.color = '#000000';
+        canvas.freeDrawingBrush.strokeLineCap = 'round';
+        canvas.freeDrawingBrush.strokeLineJoin = 'round';
       }
+
+      // Disable selection when drawing
+      canvas.selection = !canvas.isDrawingMode;
+      canvas.forEachObject((obj: any) => {
+        obj.selectable = !canvas.isDrawingMode;
+        obj.evented = !canvas.isDrawingMode;
+      });
     } catch (error) {
       console.error('Error updating drawing mode:', error);
     }
